@@ -43,9 +43,7 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.6.11"
-    }
+    // composeOptions block is removed as it's handled by the kotlin.compose plugin
 }
 
 dependencies {
@@ -57,20 +55,20 @@ dependencies {
 
     // --- CLEANED UP COMPOSE DEPENDENCIES ---
 
-    implementation(platform("androidx.compose:compose-bom:2024.05.00"))
+    // 1. This Bill of Materials (BOM) manages all Compose versions.
+    // It correctly uses the version from your libs.versions.toml file.
+    implementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(platform(libs.androidx.compose.bom)) // Use the same BOM for tests
 
+    // 2. These are the Compose libraries we need.
     implementation("androidx.activity:activity-compose")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
-
-    // --- THIS IS THE FIX ---
-    // This library contains animateItemPlacement
     implementation("androidx.compose.foundation:foundation")
-    // --- END OF FIX ---
 
-    implementation(platform("androidx.compose:compose-bom:2024.10.00"))
+    // 3. Test and Debug dependencies
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

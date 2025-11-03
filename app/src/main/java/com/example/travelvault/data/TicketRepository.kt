@@ -3,8 +3,10 @@ package com.example.travelvault.data
 
 import android.content.Context
 import android.net.Uri
-import android.webkit.MimeTypeMap // --- NEW IMPORT ---
+import android.webkit.MimeTypeMap
+import com.example.travelvault.data.local.ItineraryItemDao // <-- ADDED IMPORT
 import com.example.travelvault.data.local.TicketDao
+import com.example.travelvault.data.model.ItineraryItem // <-- ADDED IMPORT
 import com.example.travelvault.data.model.Ticket
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -15,51 +17,43 @@ import java.io.IOException
 import java.io.InputStream
 import java.time.LocalDate
 
+// --- UPDATED CONSTRUCTOR ---
 class TicketRepository(
     private val ticketDao: TicketDao,
+    private val itineraryItemDao: ItineraryItemDao, // <-- ADDED
     private val context: Context
 ) {
+
+    // --- TICKET FUNCTIONS ---
 
     fun getAllTickets(): Flow<List<Ticket>> {
         return ticketDao.getAllTickets()
     }
 
-    /**
-     * --- UPDATED FUNCTION ---
-     * Now accepts a fileUri and its mimeType.
-     */
     suspend fun saveNewTicket(
         routeName: String,
         travelDate: LocalDate,
-        fileUri: Uri, // Renamed from pdfUri
-        mimeType: String? // The new mimeType
+        fileUri: Uri,
+        mimeType: String?
     ) {
-        // Basic validation
         if (mimeType == null) {
             throw IOException("File type could not be determined.")
         }
 
         withContext(Dispatchers.IO) {
-
-            // 1. Copy the file and get its new, secure path
             val internalFilePath = copyFileToInternalStorage(fileUri, mimeType)
-
-            // 2. Create the Ticket object with the new path AND mimeType
             val newTicket = Ticket(
                 routeName = routeName,
                 travelDate = travelDate,
                 pdfFilePath = internalFilePath,
-                fileMimeType = mimeType // <-- Save the new field
+                fileMimeType = mimeType
             )
-
-            // 3. Save the ticket metadata to the Room database
             ticketDao.insertTicket(newTicket)
         }
     }
 
     suspend fun deleteTicket(ticket: Ticket) {
         withContext(Dispatchers.IO) {
-            // This logic works for any file, not just PDFs, so no change is needed.
             try {
                 val file = File(ticket.pdfFilePath)
                 if (file.exists()) {
@@ -68,30 +62,20 @@ class TicketRepository(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-
+            // Deleting the ticket will also delete all its
+            // itinerary items because of the "onDelete = CASCADE" rule.
             ticketDao.deleteTicket(ticket)
         }
     }
 
-    /**
-     * --- UPDATED FUNCTION ---
-     * Renamed from 'copyPdfToInternalStorage'.
-     * Now uses MimeTypeMap to get the correct file extension.
-     */
     private fun copyFileToInternalStorage(fileUri: Uri, mimeType: String): String {
-
-        // Use Android's MimeTypeMap to get the official extension
         val fileExtension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "file"
-
-        // Create a unique filename with the correct extension
         val filename = "ticket_${System.currentTimeMillis()}.$fileExtension"
-
         val ticketsDir = File(context.filesDir, "tickets").apply {
             if (!exists()) {
                 mkdirs()
             }
         }
-
         val destinationFile = File(ticketsDir, filename)
 
         try {
@@ -103,12 +87,37 @@ class TicketRepository(
                     input.copyTo(output)
                 }
             }
-
             return destinationFile.absolutePath
-
         } catch (e: Exception) {
             e.printStackTrace()
             throw IOException("Failed to copy file to internal storage", e)
+        }
+    }
+
+    // --- ITINERARY FUNCTIONS (ALL NEW) ---
+
+    /**
+     * Gets a flow of all itinerary items for a specific ticket.
+     */
+    fun getItineraryForTicket(ticketId: Int): Flow<List<ItineraryItem>> {
+        return itineraryItemDao.getItineraryForTicket(ticketId)
+    }
+
+    /**
+     * Saves a new or updated itinerary item.
+     */
+    suspend fun saveItineraryItem(item: ItineraryItem) {
+        withContext(Dispatchers.IO) {
+            itineraryItemDao.insertItineraryItem(item)
+        }
+    }
+
+    /**
+     * Deletes a specific itinerary item.
+     */
+    suspend fun deleteItineraryItem(item: ItineraryItem) {
+        withContext(Dispatchers.IO) {
+            itineraryItemDao.deleteItineraryItem(item)
         }
     }
 }

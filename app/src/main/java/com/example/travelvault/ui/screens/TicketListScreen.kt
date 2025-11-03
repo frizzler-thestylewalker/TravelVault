@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -79,7 +80,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun TicketListScreen(
     viewModel: TicketViewModel,
-    onNavigateToUpload: () -> Unit
+    onNavigateToUpload: () -> Unit,
+    onNavigateToItinerary: (Int) -> Unit // <-- ADDED THIS PARAMETER
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -186,7 +188,8 @@ fun TicketListScreen(
                                 TicketItem(
                                     ticket = ticket,
                                     onDelete = { ticketToDelete = it },
-                                    onOpen = { openTicketFile(context, it) } // <-- UPDATED
+                                    onOpen = { openTicketFile(context, it) },
+                                    onNavigateToItinerary = { onNavigateToItinerary(ticket.id) } // <-- PASS IT DOWN
                                 )
                             }
                         }
@@ -199,7 +202,8 @@ fun TicketListScreen(
                                 TicketItem(
                                     ticket = ticket,
                                     onDelete = { ticketToDelete = it },
-                                    onOpen = { openTicketFile(context, it) } // <-- UPDATED
+                                    onOpen = { openTicketFile(context, it) },
+                                    onNavigateToItinerary = { onNavigateToItinerary(ticket.id) } // <-- PASS IT DOWN
                                 )
                             }
                         }
@@ -212,7 +216,8 @@ fun TicketListScreen(
                                 TicketItem(
                                     ticket = ticket,
                                     onDelete = { ticketToDelete = it },
-                                    onOpen = { openTicketFile(context, it) } // <-- UPDATED
+                                    onOpen = { openTicketFile(context, it) },
+                                    onNavigateToItinerary = { onNavigateToItinerary(ticket.id) } // <-- PASS IT DOWN
                                 )
                             }
                         }
@@ -268,7 +273,8 @@ fun ListHeader(title: String) {
 fun TicketItem(
     ticket: Ticket,
     onDelete: (Ticket) -> Unit,
-    onOpen: (Ticket) -> Unit
+    onOpen: (Ticket) -> Unit,
+    onNavigateToItinerary: () -> Unit // <-- ADDED THIS PARAMETER
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
@@ -303,7 +309,8 @@ fun TicketItem(
         content = {
             TicketCard(
                 ticket = ticket,
-                onClick = { onOpen(ticket) } // <-- UPDATED
+                onClick = { onOpen(ticket) },
+                onViewItineraryClick = onNavigateToItinerary // <-- PASS IT DOWN
             )
         }
     )
@@ -339,14 +346,14 @@ fun DeleteConfirmationDialog(
 @Composable
 fun TicketCard(
     ticket: Ticket,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onViewItineraryClick: () -> Unit // <-- ADDED THIS PARAMETER
 ) {
     val formatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy")
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+            .fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -355,28 +362,43 @@ fun TicketCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = ticket.routeName,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = ticket.travelDate.format(formatter),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // This Box makes the main card content clickable to open the file
+            Box(modifier = Modifier.clickable { onClick() }) {
+                Column {
+                    Text(
+                        text = ticket.routeName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = ticket.travelDate.format(formatter),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // --- NEW BUTTON ---
+            // Aligns the button to the end of the card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                TextButton(onClick = onViewItineraryClick) {
+                    Text("View Itinerary")
+                }
+            }
+            // --- END NEW BUTTON ---
         }
     }
 }
 
-/**
- * --- UPDATED FUNCTION ---
- * Renamed to openTicketFile and now accepts the full Ticket object.
- */
 private fun openTicketFile(context: Context, ticket: Ticket) {
-    val file = File(ticket.pdfFilePath) // This field name is from V1, but it just means "file path"
+    val file = File(ticket.pdfFilePath)
     if (!file.exists()) {
         Toast.makeText(context, "Error: File not found.", Toast.LENGTH_SHORT).show()
         return
@@ -389,12 +411,7 @@ private fun openTicketFile(context: Context, ticket: Ticket) {
     )
 
     val intent = Intent(Intent.ACTION_VIEW).apply {
-        // --- THIS IS THE KEY CHANGE ---
-        // Set the data AND the mimeType.
-        // Android will find the right app (PDF viewer or Gallery)
         setDataAndType(uri, ticket.fileMimeType)
-        // --- END OF KEY CHANGE ---
-
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
@@ -404,3 +421,4 @@ private fun openTicketFile(context: Context, ticket: Ticket) {
         Toast.makeText(context, "No app found to open this file type.", Toast.LENGTH_LONG).show()
     }
 }
+

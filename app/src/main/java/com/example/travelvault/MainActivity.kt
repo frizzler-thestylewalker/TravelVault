@@ -1,8 +1,6 @@
 // com.example.travelvault/MainActivity.kt
 package com.example.travelvault
 
-// --- NEW IMPORT ---
-// --- END NEW IMPORT ---
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +13,7 @@ import androidx.room.Room
 import com.example.travelvault.data.TicketRepository
 import com.example.travelvault.data.local.AppDatabase
 import com.example.travelvault.data.local.AppDatabase.Companion.MIGRATION_1_2
+import com.example.travelvault.data.local.AppDatabase.Companion.MIGRATION_2_3 // <-- NEW IMPORT
 import com.example.travelvault.ui.screens.AppNavigation
 import com.example.travelvault.ui.theme.TravelVaultTheme
 import com.example.travelvault.ui.viewmodel.TicketViewModel
@@ -31,14 +30,21 @@ class MainActivity : ComponentActivity() {
             "travelvault.db"
         )
             .allowMainThreadQueries()
-            // --- NEW LINE TO ADD ---
-            .addMigrations(MIGRATION_1_2) // Tell Room to run our migration
-            // --- END NEW LINE ---
+            // --- ADDED BOTH MIGRATIONS ---
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            // --- END OF CHANGE ---
             .build()
     }
 
     private val repository by lazy {
-        TicketRepository(database.ticketDao(), applicationContext)
+        // --- UPDATED CONSTRUCTOR ---
+        // This will show an error until we update TicketRepository
+        TicketRepository(
+            ticketDao = database.ticketDao(),
+            itineraryItemDao = database.itineraryItemDao(), // <-- ADDED
+            context = applicationContext
+        )
+        // --- END OF CHANGE ---
     }
 
     private val ticketViewModel: TicketViewModel by viewModels {
@@ -61,3 +67,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
