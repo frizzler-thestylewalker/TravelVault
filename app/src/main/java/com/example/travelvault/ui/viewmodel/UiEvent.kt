@@ -9,4 +9,8 @@ sealed interface UiEvent {
     data class ShowSnackbar(val message: String) : UiEvent
     // Event to tell the screen to navigate back
     object NavigateBack : UiEvent
+    // --- NEW EVENT ---
+    // Event to tell the UI to dismiss any open dialog
+    object DismissDialog : UiEvent
+    // --- END NEW ---
 }
