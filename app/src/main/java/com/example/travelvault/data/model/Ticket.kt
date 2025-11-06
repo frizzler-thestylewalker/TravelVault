@@ -14,11 +14,13 @@ data class Ticket(
 
     val travelDate: LocalDate,
 
-    // We'll rename this in our minds to "filePath"
-    val pdfFilePath: String,
+    val pdfFilePath: String, // This just means "file path"
+
+    val fileMimeType: String,
 
     // --- NEW FIELD ---
-    // This will store "application/pdf", "image/jpeg", etc.
-    val fileMimeType: String
+    // This will store the mode of transport (e.g., AIRPLANE, TRAIN)
+    // We'll give it a default value so existing tickets don't break.
+    val transportType: TransportType = TransportType.OTHER
     // --- END NEW FIELD ---
 )

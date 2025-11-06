@@ -3,9 +3,10 @@ package com.example.travelvault.data
 
 import android.content.Context
 import android.net.Uri
-import android.webkit.MimeTypeMap // --- NEW IMPORT ---
+import android.webkit.MimeTypeMap
 import com.example.travelvault.data.local.TicketDao
 import com.example.travelvault.data.model.Ticket
+import com.example.travelvault.data.model.TransportType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -26,13 +27,14 @@ class TicketRepository(
 
     /**
      * --- UPDATED FUNCTION ---
-     * Now accepts a fileUri and its mimeType.
+     * Now accepts a TransportType.
      */
     suspend fun saveNewTicket(
         routeName: String,
         travelDate: LocalDate,
-        fileUri: Uri, // Renamed from pdfUri
-        mimeType: String? // The new mimeType
+        fileUri: Uri,
+        mimeType: String?,
+        transportType: TransportType // <-- NEW PARAMETER
     ) {
         // Basic validation
         if (mimeType == null) {
@@ -49,7 +51,8 @@ class TicketRepository(
                 routeName = routeName,
                 travelDate = travelDate,
                 pdfFilePath = internalFilePath,
-                fileMimeType = mimeType // <-- Save the new field
+                fileMimeType = mimeType,
+                transportType = transportType // <-- SAVE THE NEW FIELD
             )
 
             // 3. Save the ticket metadata to the Room database
@@ -74,7 +77,7 @@ class TicketRepository(
     }
 
     /**
-     * --- UPDATED FUNCTION ---
+     * --- No changes to this function ---
      * Renamed from 'copyPdfToInternalStorage'.
      * Now uses MimeTypeMap to get the correct file extension.
      */

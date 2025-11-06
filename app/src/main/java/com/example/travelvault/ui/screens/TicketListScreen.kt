@@ -186,7 +186,7 @@ fun TicketListScreen(
                                 TicketItem(
                                     ticket = ticket,
                                     onDelete = { ticketToDelete = it },
-                                    onOpen = { openTicketFile(context, it) } // <-- UPDATED
+                                    onOpen = { openTicketFile(context, it) }
                                 )
                             }
                         }
@@ -199,7 +199,7 @@ fun TicketListScreen(
                                 TicketItem(
                                     ticket = ticket,
                                     onDelete = { ticketToDelete = it },
-                                    onOpen = { openTicketFile(context, it) } // <-- UPDATED
+                                    onOpen = { openTicketFile(context, it) }
                                 )
                             }
                         }
@@ -212,7 +212,7 @@ fun TicketListScreen(
                                 TicketItem(
                                     ticket = ticket,
                                     onDelete = { ticketToDelete = it },
-                                    onOpen = { openTicketFile(context, it) } // <-- UPDATED
+                                    onOpen = { openTicketFile(context, it) }
                                 )
                             }
                         }
@@ -303,7 +303,7 @@ fun TicketItem(
         content = {
             TicketCard(
                 ticket = ticket,
-                onClick = { onOpen(ticket) } // <-- UPDATED
+                onClick = { onOpen(ticket) }
             )
         }
     )
@@ -352,31 +352,50 @@ fun TicketCard(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        // --- THIS IS THE UPDATED SECTION ---
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically // Center icon and text block
         ) {
-            Text(
-                text = ticket.routeName,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+            // 1. Icon
+            Icon(
+                imageVector = ticket.transportType.icon, // Get icon from enum
+                contentDescription = ticket.transportType.toString(),
+                tint = MaterialTheme.colorScheme.primary, // Use accent color
+                modifier = Modifier
+                    .size(40.dp) // Give it a good size
+                    .padding(end = 16.dp)
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = ticket.travelDate.format(formatter),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            // 2. Text Column
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp) // Spacing between text lines
+            ) {
+                Text(
+                    text = ticket.routeName,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = ticket.travelDate.format(formatter),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
+        // --- END OF UPDATE ---
     }
 }
 
 /**
- * --- UPDATED FUNCTION ---
+ * --- No change to this function ---
  * Renamed to openTicketFile and now accepts the full Ticket object.
  */
 private fun openTicketFile(context: Context, ticket: Ticket) {
-    val file = File(ticket.pdfFilePath) // This field name is from V1, but it just means "file path"
+    val file = File(ticket.pdfFilePath)
     if (!file.exists()) {
         Toast.makeText(context, "Error: File not found.", Toast.LENGTH_SHORT).show()
         return
@@ -389,12 +408,7 @@ private fun openTicketFile(context: Context, ticket: Ticket) {
     )
 
     val intent = Intent(Intent.ACTION_VIEW).apply {
-        // --- THIS IS THE KEY CHANGE ---
-        // Set the data AND the mimeType.
-        // Android will find the right app (PDF viewer or Gallery)
         setDataAndType(uri, ticket.fileMimeType)
-        // --- END OF KEY CHANGE ---
-
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 

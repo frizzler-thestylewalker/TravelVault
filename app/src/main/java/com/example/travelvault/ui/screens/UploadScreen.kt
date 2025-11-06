@@ -5,12 +5,16 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import android.provider.OpenableColumns
 import android.widget.DatePicker
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +23,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.travelvault.data.model.TransportType
 import com.example.travelvault.ui.viewmodel.TicketViewModel
 import com.example.travelvault.ui.viewmodel.UiEvent
 import java.time.LocalDate
@@ -47,6 +55,7 @@ import java.util.Calendar
 /**
  * The screen for adding a new ticket.
  */
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UploadScreen(
@@ -58,9 +67,15 @@ fun UploadScreen(
     // --- State variables for the form (UPDATED) ---
     var routeName by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
-    var selectedFileUri by remember { mutableStateOf<Uri?>(null) } // Renamed
-    var selectedFileMimeType by remember { mutableStateOf<String?>(null) } // NEW
-    var selectedFileName by remember { mutableStateOf("No file selected") } // Renamed
+    var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedFileMimeType by remember { mutableStateOf<String?>(null) }
+    var selectedFileName by remember { mutableStateOf("No file selected") }
+
+    // --- NEW STATE for Transport Type Dropdown ---
+    var selectedTransportType by remember { mutableStateOf<TransportType?>(null) }
+    var isTransportDropdownExpanded by remember { mutableStateOf(false) }
+    val transportTypes = TransportType.entries.toList()
+    // --- END NEW STATE ---
 
     // --- Date Picker Logic (No change) ---
     val calendar = Calendar.getInstance()
@@ -75,15 +90,13 @@ fun UploadScreen(
     )
     datePickerDialog.datePicker.minDate = System.currentTimeMillis()
 
-    // --- UPDATED: File Picker Logic ---
+    // --- File Picker Logic (No change) ---
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri ->
             if (uri != null) {
                 selectedFileUri = uri
-                // Get the MIME type from the content resolver
                 selectedFileMimeType = context.contentResolver.getType(uri)
-                // Get the display name
                 selectedFileName = getFileName(context, uri) ?: "File selected"
             }
         }
@@ -132,7 +145,54 @@ fun UploadScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // 2. Date Picker Button (No change)
+            // --- 2. NEW: Transport Type Dropdown ---
+            Box(modifier = Modifier.fillMaxWidth()) {
+                ExposedDropdownMenuBox(
+                    expanded = isTransportDropdownExpanded,
+                    onExpandedChange = { isTransportDropdownExpanded = !isTransportDropdownExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedTransportType?.toString() ?: "Select Transport Type",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Transport Type") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(
+                                expanded = isTransportDropdownExpanded
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = isTransportDropdownExpanded,
+                        onDismissRequest = { isTransportDropdownExpanded = false }
+                    ) {
+                        transportTypes.forEach { type ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = type.icon,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(end = 8.dp)
+                                        )
+                                        Text(text = type.toString())
+                                    }
+                                },
+                                onClick = {
+                                    selectedTransportType = type
+                                    isTransportDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 3. Date Picker Button (No change)
             Button(
                 onClick = { datePickerDialog.show() },
                 modifier = Modifier.fillMaxWidth()
@@ -142,41 +202,39 @@ fun UploadScreen(
                 Text(dateText)
             }
 
-            // --- 3. UPDATED: File Picker Button ---
+            // 4. File Picker Button (No change)
             Button(
                 onClick = {
-                    // Allow both PDFs and all image types
                     filePickerLauncher.launch(arrayOf("application/pdf", "image/*"))
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Select PDF or Image") // Updated text
+                Text("Select PDF or Image")
             }
             Text(
-                text = selectedFileName, // Use new state variable
+                text = selectedFileName,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(Modifier.weight(1f))
 
-            // --- 4. UPDATED: Save Button ---
+            // --- 5. UPDATED: Save Button ---
             Button(
                 onClick = {
-                    // Pass all new data (including mimeType) to the ViewModel
-                    // The ViewModel will handle validation
                     viewModel.saveNewTicket(
                         routeName,
                         selectedDate,
                         selectedFileUri,
-                        selectedFileMimeType
+                        selectedFileMimeType,
+                        selectedTransportType // <-- Pass the new value
                     )
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
                 // Updated enabled check
-                enabled = routeName.isNotBlank() && selectedDate != null && selectedFileUri != null && selectedFileMimeType != null
+                enabled = routeName.isNotBlank() && selectedDate != null && selectedFileUri != null && selectedFileMimeType != null && selectedTransportType != null
             ) {
                 Text("Save Ticket", fontWeight = FontWeight.Bold)
             }
@@ -185,7 +243,7 @@ fun UploadScreen(
 }
 
 /**
- * --- NEW HELPER FUNCTION ---
+ * --- Helper Function (No change) ---
  * Gets the display name of a file from its content Uri.
  */
 private fun getFileName(context: Context, uri: Uri): String? {
