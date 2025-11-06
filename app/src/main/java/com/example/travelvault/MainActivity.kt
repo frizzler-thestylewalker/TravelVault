@@ -1,10 +1,12 @@
 // com.example.travelvault/MainActivity.kt
 package com.example.travelvault
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +20,7 @@ import com.example.travelvault.data.TicketRepository
 import com.example.travelvault.data.local.AppDatabase
 import com.example.travelvault.data.local.AppDatabase.Companion.MIGRATION_1_2
 import com.example.travelvault.data.local.AppDatabase.Companion.MIGRATION_2_3
+import com.example.travelvault.data.local.AppDatabase.Companion.MIGRATION_3_4
 import com.example.travelvault.ui.screens.AppNavigation
 import com.example.travelvault.ui.theme.TravelVaultTheme
 import com.example.travelvault.ui.viewmodel.ItineraryViewModel
@@ -35,7 +38,9 @@ class MainActivity : ComponentActivity() {
             "travelvault.db"
         )
             .allowMainThreadQueries()
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3) // Include both migrations
+            // --- UPDATED MIGRATIONS ---
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            // --- END UPDATED MIGRATIONS ---
             .build()
     }
 
@@ -60,15 +65,14 @@ class MainActivity : ComponentActivity() {
 
 
     // --- 2. The main entry point for the UI ---
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             TravelVaultTheme {
 
-                // --- NEW: Define the gradient brush ---
-                // We'll fade from the 'surface' color (card/header)
-                // down to the 'background' color (base).
+                // --- Define the gradient brush ---
                 val gradientBrush = Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.surface,
@@ -76,7 +80,7 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
-                // --- UPDATED: Apply the gradient to the root Surface ---
+                // --- Apply the gradient to the root Surface ---
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
@@ -89,7 +93,6 @@ class MainActivity : ComponentActivity() {
                         itineraryViewModelFactory = itineraryViewModelFactory
                     )
                 }
-                // --- END OF UPDATE ---
             }
         }
     }

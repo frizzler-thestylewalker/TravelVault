@@ -2,10 +2,13 @@
 package com.example.travelvault.ui.viewmodel
 
 import android.net.Uri
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.travelvault.data.TicketRepository
 import com.example.travelvault.data.model.Ticket
+import com.example.travelvault.data.model.TransportType
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+@RequiresApi(Build.VERSION_CODES.O)
 class TicketViewModel(private val repository: TicketRepository) : ViewModel() {
 
     // --- No changes to these StateFlows ---
@@ -49,26 +53,28 @@ class TicketViewModel(private val repository: TicketRepository) : ViewModel() {
 
     /**
      * --- UPDATED FUNCTION ---
-     * Now accepts a file's URI and its MimeType.
+     * Now accepts a TransportType.
      */
     fun saveNewTicket(
         routeName: String,
         travelDate: LocalDate?, // Make nullable for validation
         fileUri: Uri?, // Make nullable for validation
-        mimeType: String? // Add mimeType
+        mimeType: String?, // Add mimeType
+        transportType: TransportType? // <-- NEW PARAMETER
     ) {
         // --- UPDATED VALIDATION ---
-        if (routeName.isBlank() || travelDate == null || fileUri == null || mimeType == null) {
+        if (routeName.isBlank() || travelDate == null || fileUri == null || mimeType == null || transportType == null) {
             viewModelScope.launch {
-                _eventFlow.emit(UiEvent.ShowSnackbar("Please fill all fields and select a file"))
+                _eventFlow.emit(UiEvent.ShowSnackbar("Please fill all fields, select a file, and choose a transport type"))
             }
             return
         }
+        // --- END UPDATED VALIDATION ---
 
         viewModelScope.launch {
             try {
                 // --- UPDATED REPOSITORY CALL ---
-                repository.saveNewTicket(routeName, travelDate, fileUri, mimeType)
+                repository.saveNewTicket(routeName, travelDate, fileUri, mimeType, transportType)
 
                 _eventFlow.emit(UiEvent.ShowSnackbar("Ticket Saved!"))
                 _eventFlow.emit(UiEvent.NavigateBack)
